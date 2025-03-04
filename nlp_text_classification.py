@@ -52,16 +52,20 @@ test_inputs = vectorizer.transform(test_df.question_text)
 """Split the training and validation sets"""
 train_inputs, val_inputs, train_targets, val_targets = train_test_split(
     inputs, 
-    raw_df.target, 
+    sample_df.target, 
     test_size=0.3
 )
 
-print(len(train_inputs))
-print(len(val_inputs.shape))
-print(len(train_targets.shape))
-print(len(val_targets))
 
 
+"""Convert to PyTorch Tensors"""
+train_input_tensors = torch.tensor(train_inputs.toarray()).type(torch.float32)
+train_target_tensors = torch.tensor(train_targets.values).type(torch.float32)
+val_input_tensors = torch.tensor(val_inputs.toarray()).type(torch.float32)
+val_target_tensors = torch.tensor(val_targets.values).type(torch.float32) 
+
+print(train_inputs.shape)
+print(train_input_tensors.shape)
 
 
 
