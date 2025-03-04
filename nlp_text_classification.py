@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 
 import torch 
 from torch import nn 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 
 
@@ -63,10 +63,35 @@ train_input_tensors = torch.tensor(train_inputs.toarray()).type(torch.float32)
 train_target_tensors = torch.tensor(train_targets.values).type(torch.float32)
 val_input_tensors = torch.tensor(val_inputs.toarray()).type(torch.float32)
 val_target_tensors = torch.tensor(val_targets.values).type(torch.float32) 
+test_input_tensors = torch.tensor(test_inputs.toarray()).type(torch.float32)
 
-print(train_inputs.shape)
-print(train_input_tensors.shape)
+"""Create PyTorch DataLoader""" 
+train_ds = TensorDataset(train_input_tensors, train_target_tensors)
+val_ds = TensorDataset(val_input_tensors, val_target_tensors)
+test_ds = TensorDataset(test_input_tensors)  
 
+BATCH_SIZE = 120
+train_dl = DataLoader(
+    train_ds, 
+    batch_size=BATCH_SIZE, 
+    shuffle=True
+)
+
+val_dl = DataLoader(
+    val_ds, 
+    batch_size=BATCH_SIZE
+)
+
+test_dl = DataLoader(
+    test_ds, 
+    BATCH_SIZE=BATCH_SIZE
+) 
+
+for batch in train_dl: 
+    batch_inputs, batch_targets = batch
+    print("batch_inputs.shape", batch_inputs.shape)
+    print("batch_target.shape", batch_targets.shape)
+    break 
 
 
 
