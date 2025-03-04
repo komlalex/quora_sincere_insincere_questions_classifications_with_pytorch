@@ -9,7 +9,8 @@ from sklearn.metrics import f1_score, accuracy_score
 from sklearn.model_selection import train_test_split
 
 import torch 
-from torch import nn 
+import torch.nn as nn 
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 
@@ -84,19 +85,46 @@ val_dl = DataLoader(
 
 test_dl = DataLoader(
     test_ds, 
-    BATCH_SIZE=BATCH_SIZE
+    batch_size=BATCH_SIZE
 ) 
 
+
+"""TRAIN ML Model""" 
+class QuoraNet(nn.Module): 
+    def __init__(self):
+        super().__init__() 
+        self.layer1 = nn.Linear(in_features=1000, out_features=512)
+        self.layer2 = nn.Linear(in_features=512, out_features=256)
+        self.layer3 = nn.Linear(in_features=256, out_features=128)
+        self.layer4 = nn.Linear(in_features=128, out_features=1)
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor: 
+        out = self.layer1(inputs)
+        out = F.relu(out)
+        out = self.layer2(out)
+        out = F.relu(out)
+        out = self.layer3(out)
+        out = F.relu(out)
+        out = self.layer4(out) 
+        return out  
+    
+model = QuoraNet()
+
 for batch in train_dl: 
-    batch_inputs, batch_targets = batch
-    print("batch_inputs.shape", batch_inputs.shape)
-    print("batch_target.shape", batch_targets.shape)
-    break 
+    bi, bt = batch 
+    print("input shape", bi.shape)
+    print("target shape", bt.shape)
 
+    bo = model(bi)
+    print("bo.shape", bo.shape)
+    print(bo)
 
+    # Convert outputs to probabilities
+    probs = torch.sigmoid(bo[:, 0]) 
 
-
-
+    # Convert probs to predictions 
+    preds = (probs > 0.5).int()
+    print(probs[:10])
+    break
 
 
 
