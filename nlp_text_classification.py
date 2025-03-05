@@ -222,7 +222,7 @@ def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.Dat
     return history
 
 
-history = fit(epochs=5, lr=0.0001, model=model, train_dl=train_dl, val_dl=val_dl)
+history = fit(epochs=6, lr=0.0001, model=model, train_dl=train_dl, val_dl=val_dl)
 
 losses = [item[0] for item in history]
 accs = [item[1] for item in history]
@@ -244,7 +244,7 @@ plt.show()
 
 
 # Make predictions on example data 
-small_df = raw_df.sample(20, random_state=42)  
+small_df = raw_df.sample(10)  
 print(small_df) 
 
 def predict_df(df): 
@@ -256,10 +256,22 @@ def predict_df(df):
     preds = torch.round(probs) 
     return preds 
 
-preds = predict_df(small_df)
-print(small_df)
-print(preds)
-print(small_df.target.values)
+#preds = predict_df(small_df)
+#print(small_df)
+#print(preds)
+#print(small_df.target.values) 
+
+def predict_text(text): 
+    df = pd.DataFrame({"question_text": [text]}) 
+    inputs = vectorizer.transform(df.question_text)
+    input_tensors = torch.tensor(inputs.toarray()).float().to(device)
+    logits = model(input_tensors) 
+    probs = torch.sigmoid(logits) 
+    preds = torch.round(probs) 
+    return preds 
+
+print(predict_text("What is the function of a plasma cell"))
+print(predict_text("What can't liberals realize that they're stupid?"))
 
 
     
