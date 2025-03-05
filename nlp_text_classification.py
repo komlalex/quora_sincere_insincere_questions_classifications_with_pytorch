@@ -264,14 +264,49 @@ def predict_df(df):
 def predict_text(text): 
     df = pd.DataFrame({"question_text": [text]}) 
     inputs = vectorizer.transform(df.question_text)
-    input_tensors = torch.tensor(inputs.toarray()).float().to(device)
-    logits = model(input_tensors) 
-    probs = torch.sigmoid(logits) 
-    preds = torch.round(probs) 
-    return preds 
+    input_tensors = torch.tensor(inputs.toarray()).float().to(device) 
 
-print(predict_text("What is the function of a plasma cell"))
-print(predict_text("What can't liberals realize that they're stupid?"))
+    model.eval()
+    with torch.inference_mode():
+        logits = model(input_tensors) 
+        probs = torch.sigmoid(logits) 
+        preds = torch.round(probs) 
+        return preds 
+
+
+print(predict_text("What is the function of a plasma cell?"))
+print(predict_text("What can't liberals realize that they're stupid?")) 
+
+#text = input("Enter question: ")
+#print(predict_text(text)) 
+
+"""Generate Predictions on Test Dataset""" 
+
+def make_preds(dl):
+    model.eval()
+    with torch.inference_mode():
+        all_preds = []
+        for batch in test_dl: 
+            inputs = batch[0]
+            inputs = inputs.to(device) 
+            logits = model(inputs)
+            probs = torch.sigmoid(logits)
+            preds = torch.round(probs)
+            all_preds.append(preds.cpu().detach().numpy())
+
+        
+        return np.concatenate(all_preds)
+
+test_preds = make_preds(test_dl)
+
+sub_df.prediction = test_preds 
+
+sub_df.to_csv("submission.csv", index=None)
+
+
+
+
+
 
 
     
