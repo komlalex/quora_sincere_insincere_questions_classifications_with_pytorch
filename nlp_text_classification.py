@@ -156,7 +156,7 @@ def evaluate(model: nn.Module, dl: torch.utils.data.DataLoader):
             probs = torch.sigmoid(logits) 
 
             # Calculate the loss 
-            loss = F.binary_cross_entropy(probs, targets) 
+            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(20).to(device)) 
 
             # Convert probabilities to predictions
             preds = torch.round(probs)
@@ -172,8 +172,8 @@ def evaluate(model: nn.Module, dl: torch.utils.data.DataLoader):
         return torch.mean(torch.tensor(losses)).item(), torch.mean(torch.tensor(accs)).item(), torch.mean(torch.tensor(f1s)).item()
 
 
-print(evaluate(model, train_dl))
-print(evaluate(model, val_dl))
+#print(evaluate(model, train_dl))
+#print(evaluate(model, val_dl))
 
 #print(summary(model)) 
 
@@ -184,7 +184,7 @@ print(evaluate(model, val_dl))
 
 # Train the model batch by batch 
 def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.DataLoader, val_dl: torch.utils.data.DataLoader):
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=1e-5)  
+    optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=1e-5)  
     history = []
 
     for epoch in tqdm(range(epochs), desc="Traning model..."): 
@@ -203,7 +203,7 @@ def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.Dat
             probs = torch.sigmoid(logits)
 
             # Compute the loss 
-            loss = F.binary_cross_entropy(probs, targets) 
+            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(20).to(device)) 
 
             # Perform optimization 
             optimizer.zero_grad()
@@ -213,15 +213,35 @@ def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.Dat
 
 
         # Evaluation phase 
-        train_loss, train_acc, train_f1 = evaluate(model, train_dl)
-        print(f"\33[34m Epoch: {epoch + 1} | Loss: {train_loss:4f} | Accuracy: {train_acc:4f} | F1 Score: {train_f1:4f}")
+        #train_loss, train_acc, train_f1 = evaluate(model, train_dl)
+        #print(f"\33[34m Epoch: {epoch + 1} | Loss: {train_loss:4f} | Accuracy: {train_acc:4f} | F1 Score: {train_f1:4f}")
 
         val_loss, val_acc, val_f1 = evaluate(model, val_dl) 
         print(f"\33[32m Epoch: {epoch + 1} | Loss: {val_loss:4f} | Accuracy: {val_acc:4f} | F1 Score: {val_f1:4f}")
-        history.append([val_loss, val_acc, val_f1]) 
+        history.append((val_loss, val_acc, val_f1))  
+    return history
 
 
-fit(epochs=5, lr=0.001, model=model, train_dl=train_dl, val_dl=val_dl)
+history = fit(epochs=5, lr=0.001, model=model, train_dl=train_dl, val_dl=val_dl)
+
+losses = [item[0] for item in history]
+accs = [item[1] for item in history]
+f1s = [item[2] for item in history] 
+
+plt.figure(figsize=(10, 15))
+plt.subplot(3, 1, 1)
+plt.plot(losses)
+plt.title("Loss")
+plt.subplot(3, 1, 2)
+plt.plot(accs)
+plt.title("Accuracy")
+plt.subplot(3, 1, 3)
+plt.plot(f1s)
+plt.title("F1 Score")
+
+plt.suptitle("Model Performance")
+plt.show()
+
 
     
 
