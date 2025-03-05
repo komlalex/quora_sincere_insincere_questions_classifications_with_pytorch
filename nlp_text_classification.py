@@ -156,7 +156,7 @@ def evaluate(model: nn.Module, dl: torch.utils.data.DataLoader):
             probs = torch.sigmoid(logits) 
 
             # Calculate the loss 
-            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(20).to(device)) 
+            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(15.6).to(device)) 
 
             # Convert probabilities to predictions
             preds = torch.round(probs)
@@ -184,7 +184,7 @@ def evaluate(model: nn.Module, dl: torch.utils.data.DataLoader):
 
 # Train the model batch by batch 
 def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.DataLoader, val_dl: torch.utils.data.DataLoader):
-    optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=1e-5)  
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=1e-5)  
     history = []
 
     for epoch in tqdm(range(epochs), desc="Traning model..."): 
@@ -203,7 +203,7 @@ def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.Dat
             probs = torch.sigmoid(logits)
 
             # Compute the loss 
-            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(20).to(device)) 
+            loss = F.binary_cross_entropy(probs, targets, weight=torch.tensor(15.6).to(device)) 
 
             # Perform optimization 
             optimizer.zero_grad()
@@ -222,7 +222,7 @@ def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.Dat
     return history
 
 
-history = fit(epochs=5, lr=0.001, model=model, train_dl=train_dl, val_dl=val_dl)
+history = fit(epochs=5, lr=0.0001, model=model, train_dl=train_dl, val_dl=val_dl)
 
 losses = [item[0] for item in history]
 accs = [item[1] for item in history]
@@ -240,7 +240,26 @@ plt.plot(f1s)
 plt.title("F1 Score")
 
 plt.suptitle("Model Performance")
-plt.show()
+plt.show() 
+
+
+# Make predictions on example data 
+small_df = raw_df.sample(20, random_state=42)  
+print(small_df) 
+
+def predict_df(df): 
+    inputs = vectorizer.transform(df.question_text) 
+    inputs = torch.tensor(inputs.toarray()).float().to(device)
+
+    logits = model(inputs).squeeze()
+    probs = torch.sigmoid(logits)
+    preds = torch.round(probs) 
+    return preds 
+
+preds = predict_df(small_df)
+print(small_df)
+print(preds)
+print(small_df.target.values)
 
 
     
