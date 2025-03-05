@@ -11,7 +11,10 @@ from sklearn.model_selection import train_test_split
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset 
+
+from tqdm.auto import tqdm 
+from torchinfo import summary
 
 
 
@@ -89,7 +92,7 @@ test_dl = DataLoader(
 ) 
 
 
-"""TRAIN ML Model""" 
+"""TRAIN DL Model""" 
 class QuoraNet(nn.Module): 
     def __init__(self):
         super().__init__() 
@@ -106,11 +109,12 @@ class QuoraNet(nn.Module):
         out = F.relu(out)
         out = self.layer4(out) 
         return out  
-    
-model = QuoraNet()
+device = "cuda" if torch.cuda.is_available() else "cpu"  
+model = QuoraNet().to(device)
 
 for batch in train_dl: 
-    bi, bt = batch 
+    bi, bt = batch
+    bi, bt = bi.to(device), bt.to(device)
     print("input shape", bi.shape)
     print("target shape", bt.shape)
 
@@ -120,14 +124,113 @@ for batch in train_dl:
 
     # Convert outputs to probabilities
     probs = torch.sigmoid(bo[:, 0]) 
+    print("probs", probs[:10])
 
     # Convert probs to predictions 
     preds = (probs > 0.5).int()
-    print(probs[:10])
+    print(preds[:10]) 
+
+    # Check metrics 
+    print("accuracy", accuracy_score(bt.cpu(), preds.cpu()))
+    print("f1 score", f1_score(bt.cpu(), preds.cpu())) 
+
+    # Loss 
+    print("loss", F.binary_cross_entropy(preds.float(), bt))
     break
 
+# Evaluate model performance
+def evaluate(model: nn.Module, dl: torch.utils.data.DataLoader):
+    losses, accs, f1s = [], [], []
+    # Loop over batches
+    model.eval()
+    with torch.inference_mode():
+        for batch in dl:
+            inputs, targets = batch
+            # Send to gpu 
+            inputs, targets = inputs.to(device), targets.to(device) 
+
+            # Pass through model 
+            logits = model(inputs).squeeze()
+
+            # Convert logits to probabilities 
+            probs = torch.sigmoid(logits) 
+
+            # Calculate the loss 
+            loss = F.binary_cross_entropy(probs, targets) 
+
+            # Convert probabilities to predictions
+            preds = torch.round(probs)
+
+            # Compute accuracy and F1 score 
+            acc = accuracy_score(y_pred=preds.cpu(), y_true=targets.cpu()) 
+            f1 = f1_score(y_pred=preds.cpu(), y_true=targets.cpu())
+        
+            losses.append(loss)
+            accs.append(acc)
+            f1s.append(f1)
+
+        return torch.mean(torch.tensor(losses)).item(), torch.mean(torch.tensor(accs)).item(), torch.mean(torch.tensor(f1s)).item()
+
+
+print(evaluate(model, train_dl))
+print(evaluate(model, val_dl))
+
+#print(summary(model)) 
 
 
 
 
-"""Train Deep Learning Model""" 
+
+
+# Train the model batch by batch 
+def fit(epochs: int, lr: float, model: nn.Module, train_dl: torch.utils.data.DataLoader, val_dl: torch.utils.data.DataLoader):
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=1e-5)  
+    history = []
+
+    for epoch in tqdm(range(epochs), desc="Traning model..."): 
+        # Training phase 
+        model.train()
+        for batch in train_dl: 
+            # Get inputs and targets
+            inputs, targets = batch
+            # Send to the appropriate device
+            inputs, targets = inputs.to(device), targets.to(device) 
+
+            # Forwards pass 
+            logits = model(inputs).squeeze()
+
+            # Get probabilities 
+            probs = torch.sigmoid(logits)
+
+            # Compute the loss 
+            loss = F.binary_cross_entropy(probs, targets) 
+
+            # Perform optimization 
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step() 
+
+
+
+        # Evaluation phase 
+        train_loss, train_acc, train_f1 = evaluate(model, train_dl)
+        print(f"\33[34m Epoch: {epoch + 1} | Loss: {train_loss:4f} | Accuracy: {train_acc:4f} | F1 Score: {train_f1:4f}")
+
+        val_loss, val_acc, val_f1 = evaluate(model, val_dl) 
+        print(f"\33[32m Epoch: {epoch + 1} | Loss: {val_loss:4f} | Accuracy: {val_acc:4f} | F1 Score: {val_f1:4f}")
+        history.append([val_loss, val_acc, val_f1]) 
+
+
+fit(epochs=5, lr=0.001, model=model, train_dl=train_dl, val_dl=val_dl)
+
+    
+
+
+
+
+            
+
+    
+
+
+
